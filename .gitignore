@@ -35,3 +35,5 @@
 .idea/*
 build*
 
+# Platform (user & system) specific configure information for dependencies (3rd-party libraries)
+local-dependencies.cmake

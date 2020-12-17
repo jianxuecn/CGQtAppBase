@@ -31,6 +31,10 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(EXISTS ${PROJECT_SOURCE_DIR}/local-dependencies.cmake)
+  include(local-dependencies.cmake)
+endif()
+
 find_package(Qt5 COMPONENTS Widgets OpenGL REQUIRED)
 find_package(assimp REQUIRED)
 find_package(glm REQUIRED)
