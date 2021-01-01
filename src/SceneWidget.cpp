@@ -34,6 +34,7 @@
 SceneWidget::SceneWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     mPhongSimpleProgram = nullptr;
+    mPhongTextureProgram = nullptr;
 
     set_float4(mBackgroundColor, 0.0f, 0.0f, 0.0f, 0.0f);
     mSceneCenter = glm::zero<glm::vec3>();
@@ -59,6 +60,7 @@ void SceneWidget::cleanupGL()
     this->cleanupSceneGL();
     mDefaultMaterial->destroyGL(this->context());
     DELETE_OPENGL_RESOURCE(mPhongSimpleProgram);
+    DELETE_OPENGL_RESOURCE(mPhongTextureProgram);
     this->doneCurrent();
 }
 
@@ -92,6 +94,22 @@ void SceneWidget::initializeGL()
     }
 #else
     if (!initialize_shader_program("PhongSimple", mPhongSimpleProgram, "phong_simple.vert", "phong_simple.frag")) {
+        return;
+    }
+#endif
+
+    mPhongTextureProgram = new QOpenGLShaderProgram;
+#if defined(USE_COMPATIBILITY_PROFILE) || defined(USE_OPENGLES)
+    if (!initialize_shader_program_comp("PhongTexture", mPhongTextureProgram, "phong_texture_comp.vert", "phong_texture_comp.frag",
+                                        [](QOpenGLShaderProgram *program) -> void {
+                                            program->bindAttributeLocation("positionIn", VertexAttribute::POSITION);
+                                            program->bindAttributeLocation("normalIn", VertexAttribute::NORMAL);
+                                            program->bindAttributeLocation("texCoordIn", VertexAttribute::TEXCOORD);
+                                        })) {
+        return;
+    }
+#else
+    if (!initialize_shader_program("PhongTexture", mPhongTextureProgram, "phong_texture.vert", "phong_texture.frag")) {
         return;
     }
 #endif
@@ -196,10 +214,10 @@ void SceneWidget::loadSceneFromFile(const QString &pathName)
         return;
     }
 
-    this->loadSceneData(scene);
+    this->loadSceneData(scene, QFileInfo(pathName).canonicalPath());
 }
 
-void SceneWidget::loadSceneData(aiScene const *scene)
+void SceneWidget::loadSceneData(aiScene const *scene, QString const &sourceFilePath)
 {
     if (scene == nullptr) return;
 
@@ -213,7 +231,7 @@ void SceneWidget::loadSceneData(aiScene const *scene)
     for (unsigned int i=0; i<scene->mNumMaterials; ++i) {
         aiMaterial *sceneMaterial = scene->mMaterials[i];
         OpenGLMaterialEntityPtr newMaterialEntity = std::make_shared<OpenGLMaterialEntity>();
-        if (newMaterialEntity->loadData(this->context(), sceneMaterial)) {
+        if (newMaterialEntity->loadData(this->context(), sceneMaterial, sourceFilePath)) {
             newMaterialEntity->setName(sceneMaterial->GetName().C_Str());
             mMaterials.emplace_back(newMaterialEntity);
         } else {
@@ -344,6 +362,11 @@ void SceneWidget::drawRenderableEntity(glm::mat4x4 const &modelMat, OpenGLRender
     if (!material) material = mDefaultMaterial;
 
     QOpenGLShaderProgram *glslProgram = mPhongSimpleProgram;
+    bool useDiffuseTexture = false;
+    if (renderableEntity->hasTexCoords() && material->diffuseTextureReady()) {
+        glslProgram = mPhongTextureProgram;
+        useDiffuseTexture = true;
+    }
 
     glslProgram->bind();
     glm::mat3x3 normMat = glm::transpose(glm::inverse(glm::mat3x3(modelMat)));
@@ -359,7 +382,14 @@ void SceneWidget::drawRenderableEntity(glm::mat4x4 const &modelMat, OpenGLRender
     glUniform4fv(glslProgram->uniformLocation("materialEmission"), 1, material->emission());
     glUniform4fv(glslProgram->uniformLocation("materialSpecular"), 1, material->specular());
     glUniform1f(glslProgram->uniformLocation("materialShininess"), material->shininess());
+    if (useDiffuseTexture) {
+        material->diffuseTexture()->bind(OpenGLMaterialEntity::TEXUNIT_DIFFUSE);
+        glUniform1i(glslProgram->uniformLocation("materialDiffuseMap"), OpenGLMaterialEntity::TEXUNIT_DIFFUSE);
+    }
     renderableEntity->drawSurface(this->context());
+    if (useDiffuseTexture) {
+        material->diffuseTexture()->release();
+    }
     glslProgram->release();
 }
 

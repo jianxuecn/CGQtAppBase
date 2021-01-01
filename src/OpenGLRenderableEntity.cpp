@@ -39,6 +39,7 @@ OpenGLRenderableEntity::OpenGLRenderableEntity()
     mBounds[0] = mBounds[1] = mBounds[2] = mBounds[3] = mBounds[4] = mBounds[5] = 0.0f;
     mComponentsPerVertex = 0;
     mHasNormal = false;
+    mHasTexCoords = false;
     mOpenGLSetup = false;
     mDataLoaded = false;
     mBufferSetup = false;
@@ -94,6 +95,7 @@ bool OpenGLRenderableEntity::loadData(QOpenGLContext const *glCtx, aiMesh const 
     if (mHasNormal) mComponentsPerVertex += 3;
 
     unsigned int texNum = mesh->GetNumUVChannels();
+    mHasTexCoords = (texNum > 0);
     mTextureComponents.clear();
     for (unsigned int i=0; i<texNum; ++i) {
         mTextureComponents.emplace_back(mesh->mNumUVComponents[i]);
@@ -133,6 +135,7 @@ void OpenGLRenderableEntity::clearData()
     mBounds[0] = mBounds[1] = mBounds[2] = mBounds[3] = mBounds[4] = mBounds[5] = 0.0f;
     mComponentsPerVertex = 0;
     mHasNormal = false;
+    mHasTexCoords = false;
     mDataLoaded = false;
     mBufferSetup = false;
 
@@ -227,6 +230,12 @@ bool OpenGLRenderableEntity::setupBuffers()
     glFuncs->glVertexAttribPointer(VertexAttribute::POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(float)*mComponentsPerVertex, 0);
     glFuncs->glEnableVertexAttribArray(VertexAttribute::NORMAL);
     glFuncs->glVertexAttribPointer(VertexAttribute::NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(float)*mComponentsPerVertex, (const float*)0 + 3);
+    if (!mTextureComponents.empty()) {
+        // currently, only one texture is used
+        GLint texCoordComps = mTextureComponents[0];
+        glFuncs->glEnableVertexAttribArray(VertexAttribute::TEXCOORD);
+        glFuncs->glVertexAttribPointer(VertexAttribute::TEXCOORD, texCoordComps, GL_FLOAT, GL_FALSE, sizeof(float)*mComponentsPerVertex, (const float*)0 + 6);
+    }
     triangleVAOBinder.release();
 
     mBufferSetup = true;

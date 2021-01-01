@@ -43,10 +43,10 @@ public:
      */
     enum
     {
-        TEXUNIT_DIFFUSE,        ///< texture unit number for diffuse map
+        TEXUNIT_DIFFUSE = 1,        ///< texture unit number for diffuse map
         TEXUNIT_NORMAL,         ///< texture unit number for normal map
         TEXUNIT_REFLECTION,     ///< texture unit number for reflection image
-        NUM_TEXUNITS            ///< max number of texture units being taken (should be <= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+        NUM_TEXUNITS = 3            ///< max number of texture units being taken (should be <= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
     };
 
     /**
@@ -177,6 +177,12 @@ public:
      * @return true if succeed
      */
     bool loadData(QOpenGLContext const *glCtx, aiMaterial const *material, QString const &textureFilePath = QString());
+
+    /**
+     * @brief whether the diffuse texture is ready
+     * @return true if it is ready (i.e. texture sucessfully loaded)
+     */
+    bool diffuseTextureReady() const;
 
 private:
     QString mName;

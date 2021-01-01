@@ -45,6 +45,9 @@ public:
     float const * bounds() const { return mBounds; }
     float const * center() const { return mCenter; }
 
+    bool hasNormal() const { return mHasNormal; }
+    bool hasTexCoords() const { return mHasTexCoords; }
+
     QString const & name() const { return mName; }
     void setName(QString const &name) { mName = name; }
 
@@ -81,6 +84,7 @@ private:
     float mBounds[6];
     float mCenter[3];
     bool mHasNormal;
+    bool mHasTexCoords;
     bool mOpenGLSetup;
     bool mDataLoaded;
     bool mBufferSetup;
