@@ -87,6 +87,18 @@ void OpenGLMaterialEntity::setShininess(GLfloat s)
     mShininess = s;
 }
 
+QOpenGLTexture * load_texture(QOpenGLTexture *tex, QString const &imageFilePath)
+{
+    QImage img = QImage(imageFilePath).mirrored();
+    if (!tex) {
+        tex = new QOpenGLTexture(img);
+    } else {
+        tex->destroy();
+        tex->setData(img);
+    }
+    return tex;
+}
+
 bool OpenGLMaterialEntity::loadDiffuseTexture(QOpenGLContext const *glCtx, QString const &imageFilePath)
 {
     if (glCtx == nullptr) {
@@ -100,23 +112,12 @@ bool OpenGLMaterialEntity::loadDiffuseTexture(QOpenGLContext const *glCtx, QStri
         mOpenGLContext = glCtx;
     }
 
-    QImage img(imageFilePath);
-    if (!mDiffuseTexture) {
-        mDiffuseTexture = new QOpenGLTexture(img);
-    } else {
-        mDiffuseTexture->destroy();
-        mDiffuseTexture->setData(img);
-    }
-//    if (!mDiffuseTexture->create(imageFilePath, TEXUNIT_DIFFUSE)) {
-//        FAILED_INFO("failed to create texture for diffuse map from file " << imageFilePath);
-//        return false;
-//    }
-    if (!mDiffuseTexture->isCreated() || !mDiffuseTexture->isStorageAllocated()) return false;
+    mDiffuseTexture = load_texture(mDiffuseTexture, imageFilePath);
+    if (!mDiffuseTexture || !mDiffuseTexture->isCreated() || !mDiffuseTexture->isStorageAllocated()) return false;
 
     mDiffuseTexture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
     mDiffuseTexture->setMagnificationFilter(QOpenGLTexture::Linear);
     return true;
-
 }
 
 bool OpenGLMaterialEntity::loadData(QOpenGLContext const *glCtx, aiMaterial const *material, QString const &textureFilePath)
@@ -135,11 +136,28 @@ bool OpenGLMaterialEntity::loadData(QOpenGLContext const *glCtx, aiMaterial cons
     material->Get(AI_MATKEY_OPACITY, mDiffuse[3]);
     material->Get(AI_MATKEY_SHININESS, mShininess);
 
-    //if (mShininess <= 0.1) mShininess = 1.0f;
+    if (mShininess <= 0.1) mShininess = 1.0f;
 
-    // TODO: add support for texture later
-    mOpenGLContext = glCtx;
+    aiString texFilePath;
+    if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texFilePath) == aiReturn_SUCCESS) {
+        if (!this->loadDiffuseTexture(glCtx, QDir(textureFilePath).absoluteFilePath(texFilePath.C_Str()))) {
+            return false;
+        }
+        LOG_INFO("diffuse map texture loaded.");
+    } else {
+        LOG_INFO("no diffuse map texture.");
+    }
 
     mIsValid = true;
     return mIsValid;
+}
+
+inline bool check_texture(QOpenGLTexture *tex)
+{
+    return (tex && tex->isCreated() && tex->isStorageAllocated());
+}
+
+bool OpenGLMaterialEntity::diffuseTextureReady() const
+{
+    return check_texture(mDiffuseTexture);
 }

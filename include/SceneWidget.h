@@ -62,7 +62,7 @@ protected:
     virtual void wheelEvent(QWheelEvent *event) override;
 
 protected:
-    void loadSceneData(aiScene const *scene);
+    void loadSceneData(aiScene const *scene, QString const &sourceFilePath);
     void cleanupSceneGL();
     void clearSceneData();
     void alignScene();
@@ -82,6 +82,7 @@ protected:
     OpenGLRenderableEntityArray mRenderables;
 
     QOpenGLShaderProgram *mPhongSimpleProgram;
+    QOpenGLShaderProgram *mPhongTextureProgram;
     GLint mViewport[4];
     GLfloat mBackgroundColor[4];
     glm::mat4x4 mCameraMatrix;

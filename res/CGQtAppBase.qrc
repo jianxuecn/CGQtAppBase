@@ -4,5 +4,9 @@
         <file>shaders/phong_simple.vert</file>
         <file>shaders/phong_simple_comp.frag</file>
         <file>shaders/phong_simple_comp.vert</file>
+        <file>shaders/phong_texture_comp.frag</file>
+        <file>shaders/phong_texture_comp.vert</file>
+        <file>shaders/phong_texture.frag</file>
+        <file>shaders/phong_texture.vert</file>
     </qresource>
 </RCC>
