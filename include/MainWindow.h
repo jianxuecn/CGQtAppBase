@@ -38,6 +38,7 @@ public:
 
 private slots:
     void openFile();
+    void playAnimation();
 
 private:
     Ui::MainWindow *ui;

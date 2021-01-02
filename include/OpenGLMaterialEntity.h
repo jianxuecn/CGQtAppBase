@@ -43,10 +43,10 @@ public:
      */
     enum
     {
-        TEXUNIT_DIFFUSE = 1,        ///< texture unit number for diffuse map
+        TEXUNIT_DIFFUSE,        ///< texture unit number for diffuse map
         TEXUNIT_NORMAL,         ///< texture unit number for normal map
         TEXUNIT_REFLECTION,     ///< texture unit number for reflection image
-        NUM_TEXUNITS = 3            ///< max number of texture units being taken (should be <= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+        NUM_TEXUNITS            ///< max number of texture units being taken (should be <= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
     };
 
     /**
@@ -61,6 +61,7 @@ public:
 
     /**
      * @brief release the related OpenGL resources (e.g. textures)
+     * @param glCtx current OpenGL context (must be the same as the context in which the first load*() function was called)
      */
     void destroyGL(QOpenGLContext const *glCtx);
 

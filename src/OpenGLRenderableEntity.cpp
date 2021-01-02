@@ -25,6 +25,8 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLContext>
 
+#include <random>
+
 #include "AssimpHelper.h"
 #include "LogUtils.h"
 #include "GLUtils.h"
@@ -43,6 +45,7 @@ OpenGLRenderableEntity::OpenGLRenderableEntity()
     mOpenGLSetup = false;
     mDataLoaded = false;
     mBufferSetup = false;
+    mVertexDataModified = false;
 }
 
 OpenGLRenderableEntity::~OpenGLRenderableEntity()
@@ -112,6 +115,7 @@ bool OpenGLRenderableEntity::loadData(QOpenGLContext const *glCtx, aiMesh const 
             add_vector(mVertexData, mesh->mTextureCoords[ti][i], mTextureComponents[ti]);
         }
     }
+    mOriginalVertexData = mVertexData;
 
     for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
         if (mesh->mFaces[i].mNumIndices != 3) continue; // ignore non-triangle face
@@ -139,7 +143,10 @@ void OpenGLRenderableEntity::clearData()
     mDataLoaded = false;
     mBufferSetup = false;
 
+    mVertexNumber = 0;
+    mTriangleNumber = 0;
     mVertexData.clear();
+    mOriginalVertexData.clear();
     mIndexData.clear();
 }
 
@@ -188,10 +195,40 @@ void OpenGLRenderableEntity::destroyGL(QOpenGLContext const *glCtx)
 
 void OpenGLRenderableEntity::drawSurface(QOpenGLContext const *glCtx)
 {
-    if (mOpenGLContext != glCtx) return;
+    if (mOpenGLContext != glCtx || !mBufferSetup) return;
     QOpenGLFunctions *glFuncs = mOpenGLContext->functions();
+
+    // update vertex buffer (GPU side) if necessary
+    if (mVertexDataModified) {
+        mVertexBuffer->bind();
+        mVertexBuffer->write(0, mVertexData.data(), mVertexData.size()*sizeof(float));
+        mVertexDataModified = false;
+    }
+
     QOpenGLVertexArrayObject::Binder triangleVAOBinder(mTriangleVAO);
     glFuncs->glDrawElements(GL_TRIANGLES, mTriangleNumber*3, GL_UNSIGNED_INT, 0);
+}
+
+void OpenGLRenderableEntity::perturbVertices()
+{
+    float lx = mBounds[1]-mBounds[0];
+    float ly = mBounds[3]-mBounds[2];
+    float lz = mBounds[5]-mBounds[4];
+    float amp = sqrt(lx*lx+ly*ly+lz*lz)*0.002f;
+    static std::random_device rd;
+    static std::mt19937 rnd(rd());
+    //static std::normal_distribution<double> nd(amp, 2);
+    static std::uniform_real_distribution<> urd(-1.0, 1.0);
+    for (unsigned int i=0; i<mVertexNumber; ++i) {
+        size_t curVertStart = mComponentsPerVertex * i;
+        glm::vec3 vertPos(mOriginalVertexData[curVertStart], mOriginalVertexData[curVertStart+1], mOriginalVertexData[curVertStart+2]);
+        glm::vec3 vertNorm(mOriginalVertexData[curVertStart+3], mOriginalVertexData[curVertStart+4], mOriginalVertexData[curVertStart+5]);
+        glm::vec3 vertNewPos = vertPos + vertNorm * (amp * static_cast<float>(urd(rnd)));
+        mVertexData[curVertStart] = vertNewPos.x;
+        mVertexData[curVertStart+1] = vertNewPos.y;
+        mVertexData[curVertStart+2] = vertNewPos.z;
+    }
+    mVertexDataModified = true;
 }
 
 bool OpenGLRenderableEntity::setupBuffers()
@@ -238,6 +275,7 @@ bool OpenGLRenderableEntity::setupBuffers()
     }
     triangleVAOBinder.release();
 
+    mVertexDataModified = false;
     mBufferSetup = true;
     return mBufferSetup;
 }

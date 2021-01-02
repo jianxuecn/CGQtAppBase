@@ -31,6 +31,8 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+double const FPS_CALC_INTERVAL = 500.0; // in ms
+
 SceneWidget::SceneWidget(QWidget *parent) : QOpenGLWidget(parent)
 {
     mPhongSimpleProgram = nullptr;
@@ -43,6 +45,12 @@ SceneWidget::SceneWidget(QWidget *parent) : QOpenGLWidget(parent)
     mCameraPanSpeed = 1.0f;
     mSceneRadius = 1.0f;
     mAngleFoV = 60.0f;
+
+    mAnimationFrameNum = 0;
+    mAnimationFrameRate = 30.0;
+    mAnimationTimerId = 0;
+
+    mCurFPS = 0.0;
 
     mOpenGLInitialized = false;
     mNeedToAlignScene = false;
@@ -143,6 +151,18 @@ void SceneWidget::paintGL()
     mLight.getPosition(mLightPos);
     //mLightPos = mCameraMatrix * mLightPos;
     this->drawSceneNode(mModelViewMatrix, scene->mRootNode);
+
+    if (this->animationStarted()) {
+        auto msecs = mFPSTimer.elapsed();
+        mAnimationFrameNum++;
+        if (msecs > FPS_CALC_INTERVAL) {
+            mCurFPS = mAnimationFrameNum * 1000.0 / msecs;
+            mFPSTimer.restart();
+            mAnimationFrameNum = 0;
+        }
+        this->renderText(10, 30, tr("%1 fps").arg(mCurFPS), QFont("Consolas", 10), QColorConstants::White);
+    }
+
 }
 
 void SceneWidget::mousePressEvent(QMouseEvent *event)
@@ -202,6 +222,16 @@ void SceneWidget::wheelEvent(QWheelEvent *event)
     event->accept();
 }
 
+void SceneWidget::timerEvent(QTimerEvent *event)
+{
+    if (event->timerId() == mAnimationTimerId) {
+        for (OpenGLRenderableEntityPtr ren : mRenderables) {
+            if (ren) ren->perturbVertices();
+        }
+    }
+    this->update();
+}
+
 void SceneWidget::loadSceneFromFile(const QString &pathName)
 {
     if (pathName.isEmpty()) return;
@@ -215,6 +245,34 @@ void SceneWidget::loadSceneFromFile(const QString &pathName)
     }
 
     this->loadSceneData(scene, QFileInfo(pathName).canonicalPath());
+}
+
+bool SceneWidget::animationStarted() const
+{
+    return (mAnimationTimerId != 0);
+}
+
+void SceneWidget::startAnimation()
+{
+    if (this->animationStarted()) {
+        LOG_WARNING_QSTRING(tr("Animation already started!"));
+    } else {
+        mAnimationTimerId = this->startTimer(1000/mAnimationFrameRate, Qt::PreciseTimer);
+        mAnimationFrameNum = 0;
+        mFPSTimer.start();
+        this->update();
+    }
+}
+
+void SceneWidget::stopAnimation()
+{
+    if (this->animationStarted()) {
+        this->killTimer(mAnimationTimerId);
+        mAnimationTimerId = 0;
+        this->update();
+    } else {
+        LOG_WARNING_QSTRING(tr("Animation already stopped!"));
+    }
 }
 
 void SceneWidget::loadSceneData(aiScene const *scene, QString const &sourceFilePath)
@@ -434,3 +492,16 @@ void SceneWidget::cameraPan(float dx, float dy)
     mCameraMatrix = glm::lookAt(mCameraPos, mTargetPos, mCameraUp);
     this->update();
 }
+
+void SceneWidget::renderText(int x, int y, QString const &str, QFont const &font, QColor const &color)
+{
+    QPainter painter(this);
+    painter.beginNativePainting();
+    painter.setPen(color);
+    painter.setFont(font);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    painter.drawText(x, y, str); // z = pointT4.z + distOverOp / 4
+    painter.end();
+}
+
+

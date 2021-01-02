@@ -59,9 +59,17 @@ int main(int argc, char *argv[])
     format.setSamples(16); // 全屏反走样的采样数
     QSurfaceFormat::setDefaultFormat(format);
 
-    QString logFilePath = QCoreApplication::applicationDirPath();
-    QDir logFileDir(logFilePath);
-    FileLogger *logger = new FileLogger(logFileDir.absoluteFilePath(APP_NAME ".log").toLocal8Bit().constData());
+    QString appHomePath = QDir::homePath() + QDir::separator() + "." APP_NAME;
+    QDir appHomeDir = QDir(appHomePath);
+    if (!appHomeDir.exists()) {
+        if (!appHomeDir.mkpath(appHomeDir.absolutePath())) {
+            QMessageBox::critical(nullptr,
+                                  QCoreApplication::translate(APP_NAME, "Error"),
+                                  QCoreApplication::translate(APP_NAME, "Cannot create path for app home: %1").arg(appHomePath));
+            return -1;
+        }
+    }
+    FileLogger *logger = new FileLogger(appHomeDir.absoluteFilePath(APP_NAME ".log").toLocal8Bit().constData());
     LogManager::instance().setLogger(logger);
 
     QString arch;

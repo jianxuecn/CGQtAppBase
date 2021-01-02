@@ -31,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     this->connect(ui->actionFileOpen, SIGNAL(triggered()), this, SLOT(openFile()));
+    this->connect(ui->pushButtonPlay, SIGNAL(clicked()), this, SLOT(playAnimation()));
 }
 
 MainWindow::~MainWindow()
@@ -45,5 +46,16 @@ void MainWindow::openFile()
 
     if (fileName.isEmpty()) return;
     ui->sceneWidget->loadSceneFromFile(fileName);
+}
+
+void MainWindow::playAnimation()
+{
+    if (ui->sceneWidget->animationStarted()) {
+        ui->sceneWidget->stopAnimation();
+        ui->pushButtonPlay->setText(">");
+    } else {
+        ui->sceneWidget->startAnimation();
+        ui->pushButtonPlay->setText("||");
+    }
 }
 

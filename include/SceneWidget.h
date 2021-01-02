@@ -47,6 +47,15 @@ public:
 
     void loadSceneFromFile(QString const &pathName);
 
+    double animationFrameRate() const { return mAnimationFrameRate; }
+    void setAnimationFrameRate(double frameRate) { mAnimationFrameRate = frameRate; }
+
+    bool animationStarted() const;
+
+public slots:
+    void startAnimation();
+    void stopAnimation();
+
 signals:
 
 protected slots:
@@ -59,7 +68,8 @@ protected:
 
     virtual void mousePressEvent(QMouseEvent *event) override;
     virtual void mouseMoveEvent(QMouseEvent *event) override;
-    virtual void wheelEvent(QWheelEvent *event) override;
+    virtual void wheelEvent(QWheelEvent *event) override;    
+    virtual void timerEvent(QTimerEvent *event) override;
 
 protected:
     void loadSceneData(aiScene const *scene, QString const &sourceFilePath);
@@ -72,6 +82,8 @@ protected:
 
     void cameraZoom(float dz);
     void cameraPan(float dx, float dy);
+
+    void renderText(int x, int y, const QString &str, const QFont &font = QFont("Helvetica", 10), QColor const &color = QColorConstants::White);
 
 protected:
     Assimp::Importer mSceneImporter;
@@ -102,6 +114,12 @@ protected:
     float mAngleFoV;
 
     QPoint mLastMousePos;
+    double mAnimationFrameRate;
+    unsigned int mAnimationFrameNum;
+    int mAnimationTimerId;
+
+    QElapsedTimer mFPSTimer;
+    double mCurFPS;
 
     bool mOpenGLInitialized;
     bool mNeedToAlignScene;

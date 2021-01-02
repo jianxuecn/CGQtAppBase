@@ -39,28 +39,101 @@ class QOpenGLContext;
 class OpenGLRenderableEntity
 {
 public:
+    /**
+     * @brief constructor
+     */
     OpenGLRenderableEntity();
+
+    /**
+     * @brief destructor
+     */
     ~OpenGLRenderableEntity();
 
+    /**
+     * @brief bounding box of this renderable entity
+     * @return a float pointer to the bounding box array containing 6 float values: [xmin, xmax, ymin, ymax, zmin, zmax]
+     */
     float const * bounds() const { return mBounds; }
+
+    /**
+     * @brief center of (the bounding box of) this renderale entity
+     * @return a float pointer to the center array containing 3 float values: [cx, cy, cz]
+     */
     float const * center() const { return mCenter; }
 
+    /**
+     * @brief whether the mesh data of this renderable entity contains normal attribute for each vertex
+     * @return true if the mesh data of this renderable entity contains normal attribute for each vertex
+     */
     bool hasNormal() const { return mHasNormal; }
+
+    /**
+     * @brief whether the mesh data of this renderable entity contains texture coordinate attribute for each vertex
+     * @return true if the mesh data of this renderable entity contains texture coordinate attribute for each vertex
+     */
     bool hasTexCoords() const { return mHasTexCoords; }
 
+    /**
+     * @brief the name of this renderable entity
+     * @return the name of this renderable entity
+     */
     QString const & name() const { return mName; }
+
+    /**
+     * @brief set the name of this renderable entity
+     * @param name the name to be set
+     */
     void setName(QString const &name) { mName = name; }
 
+    /**
+     * @brief set the material for rendering this entity
+     * @param m the shared ptr to the material
+     */
     void setMaterial(OpenGLMaterialEntityPtr m) { mMaterial = m; }
+
+    /**
+     * @brief the material for rendering this entity
+     * @return the shared ptr of the meterial for rendering this entity
+     */
     OpenGLMaterialEntityPtr material() const { return mMaterial.lock(); }
 
+    /**
+     * @brief load data from an aiMesh (read from a model file by Assimp)
+     * @param glCtx current OpenGL context (must not be null)
+     * @param mesh the pointer to the aiMesh to load data from
+     * @return true if the loading process succeeded
+     * @note this function will call setupGL() and setupBuffers()
+     */
     bool loadData(QOpenGLContext const *glCtx, aiMesh const *mesh);
+
+    /**
+     * @brief clear the mesh data (on CPU side)
+     */
     void clearData();
 
+    /**
+     * @brief setup (initialize) some OpenGL objects (e.g. Vertex Buffer Object) for rendering
+     * @param glCtx current OpenGL context (must not be null)
+     * @return true if succeeded
+     */
     bool setupGL(QOpenGLContext const *glCtx);
+
+    /**
+     * @brief destroy the OpenGL resources
+     * @param glCtx current OpenGL context (must be the same as the context in which setupGL() was called)
+     */
     void destroyGL(QOpenGLContext const *glCtx);
 
+    /**
+     * @brief draw the surface
+     * @param glCtx current OpenGL context (must be the same as the context in which setupGL() was called)
+     */
     void drawSurface(QOpenGLContext const *glCtx);
+
+    /**
+     * @brief do some perturbation on the position coordinates of the vertices
+     */
+    void perturbVertices();
 
 private:
     bool setupBuffers();
@@ -74,6 +147,7 @@ private:
     QOpenGLContext const *mOpenGLContext;
 
     VertexDataBuffer mVertexData;
+    VertexDataBuffer mOriginalVertexData;
     IndexDataBuffer mIndexData;
 
     std::weak_ptr<OpenGLMaterialEntity> mMaterial;
@@ -88,6 +162,7 @@ private:
     bool mOpenGLSetup;
     bool mDataLoaded;
     bool mBufferSetup;
+    bool mVertexDataModified;
 };
 
 #endif // OPENGLRENDERABLEENTITY_H
